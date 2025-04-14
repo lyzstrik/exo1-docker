@@ -1,25 +1,28 @@
 version: '3.8'
 
+# Ici on déclare deux réseaux : backend et frontend. Docker-compose va créer automatiquement deux réseaux isolés au démarrage.
+
 networks:
   backend:
   frontend:
 
+# On déclare ici les 3 services qui vont tourner dans nos conteneurs
 services:
   db:
-    image: mariadb:latest
+    image: mariadb:latest # Image officielle de MariaDB depuis Docker Hub, version latest (la plus récente)
     container_name: db
-    environment:
+    environment: # Déclaration des variables d'environnement pour la config de la base. Elles sont dans le fichier .env
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE:  ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    volumes:
+    volumes: # On lie un fichier SQL depuis le dossier local pour initialiser la base automatiquement
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
+    ports: # On expose le port 3306 pour pouvoir se connecter à la base depuis l’extérieur si besoin
       - "3306:3306"
-    networks:
+    networks: # La base est connectée uniquement au réseau backend (pas visible depuis l’extérieur)
       - backend
-    healthcheck:
+    healthcheck: # Vérifie que la base est bien prête avec une commande mariadb-admin ping (test de vie)
       test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
@@ -27,32 +30,32 @@ services:
       start_period: 10s
 
   web:
-    build: ./web
+    build: ./web # On build l’image à partir du Dockerfile situé dans le dossier web
     container_name: web
-    ports:
+    ports: # Expose le port 8080 pour accéder à l’application web
       - "8080:8080"
-    depends_on:
+    depends_on: # Le conteneur web démarre seulement quand la base de données est bien up et healthy
       db:
         condition: service_healthy
-    networks:
+    networks: # Connecté à backend (pour parler à la DB) et frontend (pour recevoir les connexions de l’extérieur)
       - backend
       - frontend
-    healthcheck:
+    healthcheck: # Test pour voir si l’app web répond bien (via un curl sur une route existante)
       test: ["CMD", "curl", "-f", "http://localhost:8080/user"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 10s
 
-  attacker:
-    build: ./attacker
+  attacker: 
+    build: ./attacker # Build depuis le Dockerfile situé dans le dossier attacker
     container_name: attacker
-    volumes:
+    volumes: # On partage un dossier pour récupérer les résultats dans le host (sortie du script dans /attacker/output)
       - ./attacker/output:/attacker/output
-    depends_on:
+    depends_on: # L’attaquant se lance seulement si web ET db sont prêts
       db:
         condition: service_healthy
       web:
         condition: service_healthy
-    networks:
+    networks: # Il est seulement dans le réseau frontend pour attaquer le serveur web, mais pas la DB directement
       - frontend
