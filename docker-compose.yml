@@ -9,10 +9,10 @@ services:
     image: mariadb:latest
     container_name: db
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: appdb
-      MYSQL_USER: flask
-      MYSQL_PASSWORD: flaskpass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE:  ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
@@ -20,11 +20,11 @@ services:
     networks:
       - backend
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 3
+      start_period: 10s
 
   web:
     build: ./web
@@ -32,12 +32,13 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - backend
       - frontend
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/user"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -49,6 +50,9 @@ services:
     volumes:
       - ./attacker/output:/attacker/output
     depends_on:
-      - web
+      db:
+        condition: service_healthy
+      web:
+        condition: service_healthy
     networks:
       - frontend
