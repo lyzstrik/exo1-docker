@@ -1,0 +1,30 @@
+
+services:
+  db:
+    image: mariadb:latest
+    container_name: db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: appdb
+      MYSQL_USER: flask
+      MYSQL_PASSWORD: flaskpass
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+
+  web:
+    build: ./web
+    container_name: web
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  attacker:
+    build: ./attacker
+    container_name: attacker
+    volumes:
+      - ./attacker/output:/attacker/output
+    depends_on:
+      - web
