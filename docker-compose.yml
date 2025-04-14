@@ -1,3 +1,8 @@
+version: '3.8'
+
+networks:
+  backend:
+  frontend:
 
 services:
   db:
@@ -12,14 +17,31 @@ services:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "3306:3306"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   web:
     build: ./web
     container_name: web
     ports:
-      - "8000:8000"
+      - "8008:8080"
     depends_on:
       - db
+    networks:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   attacker:
     build: ./attacker
@@ -28,3 +50,5 @@ services:
       - ./attacker/output:/attacker/output
     depends_on:
       - web
+    networks:
+      - frontend

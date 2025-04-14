@@ -28,5 +28,5 @@ def get_user():
         conn.close()
 
 print("Web server started...")
-app.run(host="0.0.0.0", port=8000)
+app.run(host="0.0.0.0", port=8080)
 print("Web server stopped.")
