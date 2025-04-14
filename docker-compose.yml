@@ -23,8 +23,8 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 10
+      start_period: 30s
 
   web:
     build: ./web
@@ -37,7 +37,7 @@ services:
       - backend
       - frontend
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 10s
       timeout: 5s
       retries: 3
